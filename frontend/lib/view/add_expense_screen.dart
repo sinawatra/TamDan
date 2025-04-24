@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../model/transaction_service.dart';
+import '../services/transaction_api_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final Function(String, double, DateTime, File?, bool isExpense)? onAddExpense;
@@ -25,6 +26,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isExpense = true; // Default to expense
   final TransactionService _transactionService = TransactionService();
+  final TransactionApiService _apiService = TransactionApiService();
 
   // Sample expense options
   final List<Map<String, dynamic>> _expenseOptions = [
@@ -58,7 +60,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  void _addExpense() {
+  void _addExpense() async {
     if (_amountController.text.isNotEmpty) {
       double amount = double.parse(_amountController.text);
       
@@ -87,8 +89,47 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         rawAmount: !_isExpense ? amount : -amount, // Store the raw amount with correct sign
       );
       
-      // Add transaction to service
+      // Add transaction to local service
       _transactionService.addTransaction(newTransaction);
+      
+      // Save to database via API
+      try {
+        Map<String, dynamic> result;
+        
+        print('DEBUG: Trying to add ${_isExpense ? "expense" : "income"} with:');
+        print('DEBUG: Category: $_selectedName');
+        print('DEBUG: Amount: $amount');
+        print('DEBUG: Date: $_selectedDate');
+        
+        // Check if user ID is set
+        // The _getUserId method is private, we can't access it directly
+        // Just print debug information about user authentication
+        print('DEBUG: Checking if user is authenticated...');
+        
+        if (_isExpense) {
+          result = await _apiService.addExpense(_selectedName, amount, _selectedDate);
+        } else {
+          result = await _apiService.addIncome(_selectedName, amount, _selectedDate);
+        }
+        
+        print('DEBUG: API response: $result');
+        
+        if (result['status'] != 'success') {
+          // Handle error - could show a snackbar but still allow local storage
+          print('DEBUG: API Error: ${result['message']}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('API Error: ${result['message']}'))
+          );
+        } else {
+          print('DEBUG: Successfully added to backend database');
+        }
+      } catch (e) {
+        // Handle network errors
+        print('DEBUG: Network Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network Error: $e'))
+        );
+      }
       
       Navigator.pop(context);
     } else {
