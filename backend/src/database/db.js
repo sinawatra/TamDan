@@ -41,6 +41,46 @@ function initDb() {
         console.log('Users table initialized');
       }
     });
+
+    // Create expense table if it doesn't exist
+    db.run(`
+      CREATE TABLE IF NOT EXISTS expense (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        category TEXT NOT NULL,
+        date DATE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating expense table:', err.message);
+      } else {
+        console.log('Expense table initialized');
+      }
+    });
+
+    // Create income table if it doesn't exist
+    db.run(`
+      CREATE TABLE IF NOT EXISTS income (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        category TEXT NOT NULL,
+        date DATE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating income table:', err.message);
+      } else {
+        console.log('Income table initialized');
+      }
+    });
   });
 }
 

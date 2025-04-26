@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Update this URL with your backend URL (use IP address if testing on physical device)
@@ -28,6 +29,14 @@ class AuthService {
       if (response.statusCode == 201) {
         // Store token securely
         await storage.write(key: 'token', value: responseData['token']);
+        
+        // Store user ID in SharedPreferences for easy access
+        if (responseData['data'] != null && responseData['data']['user'] != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', responseData['data']['user']['id'].toString());
+          print('DEBUG AuthService: Stored userId in SharedPreferences: ${responseData['data']['user']['id']}');
+        }
+        
         return responseData;
       } else {
         throw Exception(responseData['message'] ?? 'Registration failed');
@@ -50,10 +59,21 @@ class AuthService {
       );
 
       final responseData = jsonDecode(response.body);
+      print('DEBUG AuthService: Login response: $responseData');
       
       if (response.statusCode == 200) {
         // Store token securely
         await storage.write(key: 'token', value: responseData['token']);
+        
+        // Store user ID in SharedPreferences for easy access
+        if (responseData['data'] != null && responseData['data']['user'] != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', responseData['data']['user']['id'].toString());
+          print('DEBUG AuthService: Stored userId in SharedPreferences: ${responseData['data']['user']['id']}');
+        } else {
+          print('DEBUG AuthService: Could not find user data in response to store userId');
+        }
+        
         return responseData;
       } else {
         throw Exception(responseData['message'] ?? 'Login failed');
@@ -83,6 +103,12 @@ class AuthService {
       final responseData = jsonDecode(response.body);
       
       if (response.statusCode == 200) {
+        // Update user ID in SharedPreferences (in case it wasn't set before)
+        if (responseData['data'] != null && responseData['data']['user'] != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', responseData['data']['user']['id'].toString());
+        }
+        
         return responseData;
       } else {
         throw Exception(responseData['message'] ?? 'Failed to get user data');
@@ -95,6 +121,9 @@ class AuthService {
   // Logout user
   Future<void> logout() async {
     await storage.delete(key: 'token');
+    // Also clear SharedPreferences data
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
   }
 
   // Check if user is logged in
